@@ -5,67 +5,79 @@ import './App.css';
 const App = () => {
   const sceneRef = useRef(null);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [earthTime, setEarthTime] = useState(new Date().toLocaleTimeString());
+  const [useEarthTime, setUseEarthTime] = useState(false);
+  const light = useRef(null);
+  const moon = useRef(null);
+  const isSceneInitialized = useRef(false);
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
   };
-  const isSceneInitialized = useRef(false);
+
+  const toggleEarthTime = () => {
+    setUseEarthTime(!useEarthTime);
+  };
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setEarthTime(new Date().toLocaleTimeString());
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (!isSceneInitialized.current) {
-    console.log('Initializing scene...');
-    const scene = new THREE.Scene();
-    scene.clear();  
-    
+      const scene = new THREE.Scene();
+      light.current = new THREE.DirectionalLight(0xffffff, 1);
+      scene.add(light.current);
 
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
 
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    sceneRef.current.appendChild(renderer.domElement);
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      sceneRef.current.appendChild(renderer.domElement);
 
-  
-    const starsGeometry = new THREE.BufferGeometry();
-    const starsMaterial = new THREE.PointsMaterial({ color: 0xFFFFFF, size: 0.1 });
+      const geometry = new THREE.SphereGeometry(10, 32, 32);
+      const texture = new THREE.TextureLoader().load("/moon_texture.jpg");
+      const material = new THREE.MeshBasicMaterial({ map: texture });
+      const lambertMaterial = new THREE.MeshLambertMaterial({ map: texture });
 
-    const vertices = [];
+      moon.current = new THREE.Mesh(geometry, material);
+      scene.add(moon.current);
 
-    for (let i = 0; i < 5000; i++) {
-      const x = (Math.random() - 0.5) * 2000;
-      const y = (Math.random() - 0.5) * 2000;
-      const z = (Math.random() - 0.5) * 2000;
-      vertices.push(x, y, z);
-    }
+      camera.position.z = 30;
 
-    starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const stars = new THREE.Points(starsGeometry, starsMaterial);
-    scene.add(stars);
+      const animate = () => {
+        requestAnimationFrame(animate);
 
-   
-    const geometry = new THREE.SphereGeometry(10, 32, 32);
-    const texture = new THREE.TextureLoader().load("/moon_texture.jpg");
-    const material = new THREE.MeshBasicMaterial({ map: texture });
-    const moon = new THREE.Mesh(geometry, material);
-    scene.add(moon);
+        // Rotate the moon
+        if (moon.current) {
+          moon.current.rotation.y += 0.005;
+        }
 
-    camera.position.z = 30;
+        if (useEarthTime) {
+          const currentTime = new Date();
+          const sunAngle = ((currentTime.getHours() + currentTime.getMinutes() / 60) / 24) * Math.PI * 2;
+          light.current.position.set(Math.sin(sunAngle) * 30, 0, Math.cos(sunAngle) * 30);
+          moon.current.material = lambertMaterial;
+        } else {
+          moon.current.material = material;
+        }
 
-    const animate = () => {
-      requestAnimationFrame(animate);
-      moon.rotation.x += 0.005;
-      moon.rotation.y += 0.005;
-      renderer.render(scene, camera);
-    };
+        renderer.render(scene, camera);
+      };
 
-    animate();
+      animate();
       isSceneInitialized.current = true;
     }
-  }, []);
+  }, [useEarthTime]);
 
   return (
     <div ref={sceneRef} className="scene-container">
@@ -82,6 +94,11 @@ const App = () => {
           <div className="slider-container">
             <label>Seismic Activity:</label>
             <input type="range" min="1" max="100" className="control-slider" />
+          </div>
+          <div className="slider-container">
+            <label>Earth Time:</label>
+            <div>{earthTime}</div>
+            <button onClick={toggleEarthTime} className="control-button">Toggle Earth Time</button>
           </div>
         </div>
       )}
