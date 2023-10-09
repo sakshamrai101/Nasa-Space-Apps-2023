@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import * as d3 from "d3"; // Import D3.js
 import './App.css';
 
 const App = () => {
@@ -7,9 +8,11 @@ const App = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [earthTime, setEarthTime] = useState(new Date().toLocaleTimeString());
   const [useEarthTime, setUseEarthTime] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false); // State for heatmap visibility
   const light = useRef(null);
   const moon = useRef(null);
   const isSceneInitialized = useRef(false);
+  const heatmapData = useRef([]); // Store heatmap data
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
@@ -17,6 +20,27 @@ const App = () => {
 
   const toggleEarthTime = () => {
     setUseEarthTime(!useEarthTime);
+  };
+
+  const toggleHeatmap = () => {
+    setShowHeatmap(!showHeatmap);
+
+    if (!showHeatmap) {
+      clearHeatmap();
+    } else {
+      createHeatmap();
+    }
+  };
+
+  const clearHeatmap = () => {
+    // Remove all heatmap points
+    if (moon.current) {
+      moon.current.children.forEach((child) => {
+        if (child.isHeatmapPoint) {
+          moon.current.remove(child);
+        }
+      });
+    }
   };
 
   useEffect(() => {
@@ -79,6 +103,37 @@ const App = () => {
     }
   }, [useEarthTime]);
 
+  // Sample moonquake data [x, y, z, magnitude]
+  const moonquakeData = [
+    [1, 1, 1, 5],
+    [2, 2, 2, 4],
+    // Add more data as needed
+  ];
+
+  const createHeatmap = () => {
+    setShowHeatmap(true);
+    clearHeatmap();
+
+    // Create heatmap logic here.
+    // You can use d3 to generate color scales based on moonquake magnitude.
+    const colorScale = d3.scaleSequential(d3.interpolatePlasma).domain([0, 10]);
+
+    moonquakeData.forEach((quake) => {
+      const [x, y, z, magnitude] = quake;
+      const geometry = new THREE.SphereGeometry(0.2, 32, 32);
+      const color = d3.rgb(colorScale(magnitude));
+      const material = new THREE.MeshBasicMaterial({ color });
+      const heatmapPoint = new THREE.Mesh(geometry, material);
+
+      heatmapPoint.position.set(x, y, z);
+      moon.current.add(heatmapPoint);
+
+      // Store heatmap data for future removal
+      heatmapData.current.push(heatmapPoint);
+      heatmapPoint.isHeatmapPoint = true;
+    });
+  };
+
   return (
     <div ref={sceneRef} className="scene-container">
       <div className="landing-page">
@@ -90,7 +145,7 @@ const App = () => {
           <h2>Moonquake Data</h2>
           <button className="control-button">Activate Sensor 1</button>
           <button className="control-button">Activate Sensor 2</button>
-          <button className="control-button">Show Heatmap</button>
+          <button onClick={toggleHeatmap} className="control-button">Show Heatmap</button>
           <div className="slider-container">
             <label>Seismic Activity:</label>
             <input type="range" min="1" max="100" className="control-slider" />
