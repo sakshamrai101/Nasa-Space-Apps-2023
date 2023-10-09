@@ -15,7 +15,7 @@
   position: absolute;
   top: 50%;
   left: 20%;
-  z-index: 3; 
+  z-index: 3;
   color: white;
   text-align: center;
   transform: translateY(-50%);
@@ -38,17 +38,17 @@
   position: absolute;
   top: 0;
   left: 0;
-  background-color: rgba(0, 0, 0, 0.8);  
+  background-color: rgba(0, 0, 0, 0.8);
   color: white;
   width: 300px;
   height: 50vh;
-  z-index: 4;  
+  z-index: 4;
   padding: 20px;
   box-shadow: 0px 0px 30px 0px #000000;
-  transition: left 0.5s ease-in-out; 
+  transition: left 0.5s ease-in-out;
 }
 
-.app-container .sidebar-active + .sidebar {
+.app-container .sidebar-active+.sidebar {
   left: 0;
 }
 
@@ -68,13 +68,18 @@
 .slider-container {
   margin-top: 20px;
 }
-.earth-time-button {
-  background-color: #00aaff;
-  color: white;
-  border: none;
-  margin: 10px;
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 5px;
-  font-weight: bold;
+
+.heatmap-point {
+  width: 10px;
+  /* Adjust the width as needed */
+  height: 10px;
+  /* Adjust the height as needed */
+  border-radius: 50%;
+  /* Makes the points circular */
+  background-color: red;
+  /* Set the desired heatmap point color */
+  opacity: 0.7;
+  /* Adjust the opacity as needed */
+  position: absolute;
+  transform: translate(-50%, -50%);
 }
