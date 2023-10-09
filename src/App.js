@@ -1,18 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import * as d3 from "d3"; // Import D3.js
+import * as d3 from "d3";
 import './App.css';
 
 const App = () => {
   const sceneRef = useRef(null);
+  const camera = useRef(null);
+  const originalCameraZ = useRef(30);
   const [showSidebar, setShowSidebar] = useState(false);
   const [earthTime, setEarthTime] = useState(new Date().toLocaleTimeString());
   const [useEarthTime, setUseEarthTime] = useState(false);
-  const [showHeatmap, setShowHeatmap] = useState(false); // State for heatmap visibility
+  const [showHeatmap, setShowHeatmap] = useState(false);
   const light = useRef(null);
   const moon = useRef(null);
   const isSceneInitialized = useRef(false);
-  const heatmapData = useRef([]); // Store heatmap data
+  const heatmapData = useRef([]);
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
@@ -24,7 +26,6 @@ const App = () => {
 
   const toggleHeatmap = () => {
     setShowHeatmap(!showHeatmap);
-
     if (!showHeatmap) {
       clearHeatmap();
     } else {
@@ -33,7 +34,6 @@ const App = () => {
   };
 
   const clearHeatmap = () => {
-    // Remove all heatmap points
     if (moon.current) {
       moon.current.children.forEach((child) => {
         if (child.isHeatmapPoint) {
@@ -43,11 +43,30 @@ const App = () => {
     }
   };
 
+  const zoomIn = () => {
+    if (camera.current) {
+      originalCameraZ.current = camera.current.position.z;
+      camera.current.position.z = 15;
+    }
+  };
+
+  const zoomOut = () => {
+    if (camera.current) {
+      originalCameraZ.current = camera.current.position.z;
+      camera.current.position.z = 45;
+    }
+  };
+
+  const resetZoom = () => {
+    if (camera.current) {
+      camera.current.position.z = originalCameraZ.current;
+    }
+  };
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       setEarthTime(new Date().toLocaleTimeString());
     }, 1000);
-
     return () => clearInterval(intervalId);
   }, []);
 
@@ -56,59 +75,27 @@ const App = () => {
       const scene = new THREE.Scene();
       light.current = new THREE.DirectionalLight(0xffffff, 1);
       scene.add(light.current);
-
-      const camera = new THREE.PerspectiveCamera(
+      camera.current = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
         0.1,
         1000
       );
-
       const renderer = new THREE.WebGLRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
       sceneRef.current.appendChild(renderer.domElement);
-
       const geometry = new THREE.SphereGeometry(10, 32, 32);
       const texture = new THREE.TextureLoader().load("/moon_texture.jpg");
       const material = new THREE.MeshBasicMaterial({ map: texture });
       const lambertMaterial = new THREE.MeshLambertMaterial({ map: texture });
-
       moon.current = new THREE.Mesh(geometry, material);
       scene.add(moon.current);
-      fetch('http://localhost:5000/get_data').then(response => console.log(response))
-      fetch('http://localhost:5000/get_data')
-        .then(response => response.json())
-        .then(data => {
-          // Iterate over the data
-          data.forEach(item => {
-            // Check if coordinates are not NaN
-            console.log(item)
-            if (!isNaN(item.coords[0]) && !isNaN(item.coords[1]) && !isNaN(item.coords[2])) {
-              // Create a marker for each set of coordinates
-              const markerGeometry = new THREE.SphereGeometry(0.5, 32, 32);  // adjust size as needed
-              const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });  // choose a color
-              const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-
-              // Set the position of the marker using the coordinates
-              marker.position.set(item.coords[0], item.coords[1], item.coords[2]);
-
-              // Add the marker to the scene
-              scene.add(marker);
-            }
-          });
-        })
-        .catch(error => console.error('Error fetching the data:', error));
-
-      camera.position.z = 30;
-
+      camera.current.position.z = 30;
       const animate = () => {
         requestAnimationFrame(animate);
-
-        // Rotate the moon
         if (moon.current) {
           moon.current.rotation.y += 0.005;
         }
-
         if (useEarthTime) {
           const currentTime = new Date();
           const sunAngle = ((currentTime.getHours() + currentTime.getMinutes() / 60) / 24) * Math.PI * 2;
@@ -117,41 +104,30 @@ const App = () => {
         } else {
           moon.current.material = material;
         }
-
-        renderer.render(scene, camera);
+        renderer.render(scene, camera.current);
       };
-
       animate();
       isSceneInitialized.current = true;
     }
   }, [useEarthTime]);
 
-  // Sample moonquake data [x, y, z, magnitude]
   const moonquakeData = [
     [1, 1, 1, 5],
-    [2, 2, 2, 4],
-    // Add more data as needed
+    [2, 2, 2, 4]
   ];
 
   const createHeatmap = () => {
     setShowHeatmap(true);
     clearHeatmap();
-
-    // Create heatmap logic here.
-    // You can use d3 to generate color scales based on moonquake magnitude.
     const colorScale = d3.scaleSequential(d3.interpolatePlasma).domain([0, 10]);
-
     moonquakeData.forEach((quake) => {
       const [x, y, z, magnitude] = quake;
       const geometry = new THREE.SphereGeometry(0.2, 32, 32);
       const color = d3.rgb(colorScale(magnitude));
       const material = new THREE.MeshBasicMaterial({ color });
       const heatmapPoint = new THREE.Mesh(geometry, material);
-
       heatmapPoint.position.set(x, y, z);
       moon.current.add(heatmapPoint);
-
-      // Store heatmap data for future removal
       heatmapData.current.push(heatmapPoint);
       heatmapPoint.isHeatmapPoint = true;
     });
@@ -166,8 +142,9 @@ const App = () => {
       {showSidebar && (
         <div className="sidebar">
           <h2>Moonquake Data</h2>
-          <button className="control-button">Activate Sensor 1</button>
-          <button className="control-button">Activate Sensor 2</button>
+          <button onClick={zoomIn} className="control-button">Activate Sensor 1</button>
+          <button onClick={zoomOut} className="control-button">Activate Sensor 2</button>
+          <button onClick={resetZoom} className="control-button">Reset Zoom</button>
           <button onClick={toggleHeatmap} className="control-button">Show Heatmap</button>
           <div className="slider-container">
             <label>Seismic Activity:</label>
