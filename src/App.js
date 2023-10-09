@@ -51,6 +51,29 @@ const App = () => {
 
       moon.current = new THREE.Mesh(geometry, material);
       scene.add(moon.current);
+      fetch('http://localhost:5000/get_data').then(response => console.log(response))
+      fetch('http://localhost:5000/get_data')
+        .then(response => response.json())
+        .then(data => {
+          // Iterate over the data
+          data.forEach(item => {
+            // Check if coordinates are not NaN
+            console.log(item)
+            if (!isNaN(item.coords[0]) && !isNaN(item.coords[1]) && !isNaN(item.coords[2])) {
+              // Create a marker for each set of coordinates
+              const markerGeometry = new THREE.SphereGeometry(0.5, 32, 32);  // adjust size as needed
+              const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });  // choose a color
+              const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+
+              // Set the position of the marker using the coordinates
+              marker.position.set(item.coords[0], item.coords[1], item.coords[2]);
+
+              // Add the marker to the scene
+              scene.add(marker);
+            }
+          });
+        })
+        .catch(error => console.error('Error fetching the data:', error));
 
       camera.position.z = 30;
 
