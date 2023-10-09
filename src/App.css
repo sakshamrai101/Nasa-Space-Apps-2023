@@ -68,3 +68,13 @@
 .slider-container {
   margin-top: 20px;
 }
+.earth-time-button {
+  background-color: #00aaff;
+  color: white;
+  border: none;
+  margin: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-weight: bold;
+}
